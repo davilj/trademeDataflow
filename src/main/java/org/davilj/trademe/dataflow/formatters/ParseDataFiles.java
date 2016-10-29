@@ -20,7 +20,7 @@ public class ParseDataFiles {
 
 	public static interface DailySalesOptions extends PipelineOptions {
 		@Description("Path of the file to read from")
-		@Default.String("gs://dataflow-samples/shakespeare/kinglear.txt")
+		@Default.String("gs://trademedata/d_201512.merge.zip")
 		String getInputFile();
 
 		void setInputFile(String value);

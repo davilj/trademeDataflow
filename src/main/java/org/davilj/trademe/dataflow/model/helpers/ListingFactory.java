@@ -181,4 +181,8 @@ public class ListingFactory {
 
 	}
 
+	public static ListingParser createParser(String line) {
+		return new ListingParser(line);
+	}
+
 }
