@@ -36,7 +36,8 @@ public class ParseDataFilesTest {
 	public void test() throws IOException {
 		String[] args = {
 				"--inputFile=/Users/daniev/development/google/trademe/dataflow/src/test/resources/test.dailySales",
-				"--output=/Users/daniev/development/google/trademe/dataflow/src/test/resources/test.dailySales.result" };
+				"--output=/Users/daniev/development/google/trademe/dataflow/src/test/resources/test.dailySales.result"
+				};
 
 		DailySalesOptions dailySalesOptions = PipelineOptionsFactory.fromArgs(args).withValidation()
 				.as(DailySalesOptions.class);

@@ -3,7 +3,7 @@ package org.davilj.trademe.dataflow.model.helpers;
 public class BidParser {
 	private String[] parts;
 	public BidParser(String bidStr) {
-		String[] bidParts = bidStr.split("//|");
+		String[] bidParts = bidStr.split("\\|");
 		//cat1, cat, day, hour, dayHour, bids, amount
 		if (bidParts.length!=7) {
 			throw new RuntimeException("Expecting 7 parts, but was " + bidParts.length);

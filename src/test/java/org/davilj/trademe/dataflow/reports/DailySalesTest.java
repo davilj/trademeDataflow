@@ -80,8 +80,9 @@ public class DailySalesTest {
 	@Test
 	public void testPipeLine() throws IOException {
 		String[] args = {
-				"--inputFile=/Users/daniev/development/google/trademe/dataflow/src/test/resources/test.dailySales",
-				"--output=/Users/daniev/development/google/trademe/dataflow/src/test/resources/test.dailySales.result" };
+				"--inputFile=/Users/daniev/development/google/trademe/dataflow/src/test/resources/test.dailySales.v1",
+				"--output=/Users/daniev/development/google/trademe/dataflow/src/test/resources/test.dailySales.result",
+				"--errorFile=/Users/daniev/development/google/trademe/dataflow/src/test/resources/test.dailySales.errors"};
 
 		DailySalesOptions dailySalesOptions = PipelineOptionsFactory.fromArgs(args).withValidation()
 				.as(DailySalesOptions.class);
