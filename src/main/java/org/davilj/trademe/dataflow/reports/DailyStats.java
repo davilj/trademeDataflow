@@ -1,5 +1,9 @@
 package org.davilj.trademe.dataflow.reports;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -12,6 +16,7 @@ import com.google.cloud.dataflow.sdk.transforms.Combine.CombineFn;
 public class DailyStats extends CombineFn<Integer, DailyStats.Stats, String> {
 	
 		public static class Stats {
+		public static final byte STOPBYTE = '@';
 		int sum = 0;
 		int count = 0;
 		int min = Integer.MAX_VALUE;
@@ -27,27 +32,32 @@ public class DailyStats extends CombineFn<Integer, DailyStats.Stats, String> {
 			return String.format("%s|%s|%s|%s", sum, count, min, max);
 		}
 
-		public static Stats createFromString(String data) {
-			String[] parts = data.split("\\|");
-			System.err.println(data + " - ");
+		public static Stats readFromStream(InputStream in) {
 			Stats stats = new Stats();
-			if (data.trim().isEmpty()) return stats;
-			stats.sum = Integer.parseInt(extractNumberString(parts[0]));
-			stats.count = Integer.parseInt(extractNumberString(parts[1]));
-			stats.min = Integer.parseInt(extractNumberString(parts[2]));
-			stats.max = Integer.parseInt(extractNumberString(parts[3]));
+			
+			DataInputStream dataIn = new DataInputStream(in);
+			try {
+				stats.sum = dataIn.readInt();
+				stats.count = dataIn.readInt();
+				stats.max = dataIn.readInt();
+				stats.min = dataIn.readInt();
+			} catch (IOException e) {
+				throw new RuntimeException();
+			}
 			return stats;
 		}
-		
-		private static String extractNumberString(String str) {
-			String trimmed = str.trim();
-			if (trimmed.isEmpty()) {
-				return "0";
-			} else {
-				return trimmed;
+
+		public void writeToSteam(OutputStream out) {
+			DataOutputStream dataOut = new DataOutputStream(out);
+			try {
+				dataOut.writeInt(this.count);
+				dataOut.writeInt(this.sum);
+				dataOut.writeInt(this.max);
+				dataOut.writeInt(this.min);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
 			}
 		}
-
 	}
 
 	@Override
@@ -91,22 +101,13 @@ public class DailyStats extends CombineFn<Integer, DailyStats.Stats, String> {
 		@Override
 		public void encode(Stats value, OutputStream outStream,
 				com.google.cloud.dataflow.sdk.coders.Coder.Context context) throws CoderException, IOException {
-			byte[] bytes = value.toString().getBytes();
-			outStream.write(bytes);
+			value.writeToSteam(outStream);
 		}
 
 		@Override
 		public Stats decode(InputStream inStream, com.google.cloud.dataflow.sdk.coders.Coder.Context context)
 				throws CoderException, IOException {
-			int i=-1;
-			int index=0;
-			byte[] bytes = new byte[128];
-			while ((i = inStream.read())!=-1) {
-				bytes[index++]=(byte)i;
-			}
-			
-			String data = new String(bytes);
-			return Stats.createFromString(data);
+			return Stats.readFromStream(inStream);
 		}
 	}
 	

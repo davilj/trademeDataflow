@@ -123,9 +123,8 @@ public class DailySales {
 		}
 	}
 
-
+	//extract cat1, cat, date, date and hour, amount and number of bids
 	public static class ExtractBidInfo extends DoFn<String, String> {
-		//extract date, date and hour, and true date
 		
 		@Override
 		public void processElement(ProcessContext c) throws Exception {
@@ -145,22 +144,7 @@ public class DailySales {
 			}
 		}
 	}
-	
-	public static class ExtractStats extends DoFn<KV<String, Iterable<Integer>>, String> {
-
-		@Override
-		public void processElement(DoFn<KV<String, Iterable<Integer>>, String>.ProcessContext c) throws Exception {
-			KV<String, Iterable<Integer>> data = c.element();
-			Integer min = Integer.MAX_VALUE;
-			Integer max = Integer.MIN_VALUE;
-			for (Integer value : data.getValue()) {
-				min = (value<min)?value:min;
-				max = (value>max)?value:max;
-			}
-		}
 		
-	}
-	
 	//ensure that we remove duplicates
 	public static class ExtractKey extends DoFn<String, KV<String, String>> {
 
@@ -192,6 +176,7 @@ public class DailySales {
 		}
 	}
 	
+	//take each listing and convert it into cat (or cat1), day (or dayhour) and amount
 	public static class ExtratDailyData extends DoFn<String, String[]> {
 		//Side output, grouping in Cat1, cat, day, day-hour, hour for numberOfBids and amount
 		@Override
@@ -218,24 +203,6 @@ public class DailySales {
 		}
 	}
 
-	public static Pipeline createPipeline(DailySalesOptions dailySalesOptions) {
-		
-		Pipeline p = Pipeline.create(dailySalesOptions);
-		p.getCoderRegistry().registerCoder(DailyStats.Stats.class, DailyStats.getCoder());
-		
-		PCollectionTuple tuples = p.apply(TextIO.Read.named("ReadLines").from(dailySalesOptions.getInputFile()).withCompressionType(TextIO.CompressionType.GZIP))
-		.apply(new ExtractValidBids())
-		.apply(new RemoveDuplicates());
-		
-		tuples.get(errorsTag).apply(TextIO.Write.named("WriteErrors").to(dailySalesOptions.getErrorFile()));
-		tuples.get(validBidsTag).apply(TextIO.Write.named("ValidBids").to(dailySalesOptions.getErrorFile()));
-		
-		tuples.get(validBidsTag).apply(new Classifer()).apply(TextIO.Write.named("Stats").to(dailySalesOptions.getOutput()));
-		return p;
-	}
-	
-	
-	
 	public static class RemoveDuplicates extends PTransform<PCollection<String>, PCollectionTuple> {
 		@Override
 		public PCollectionTuple apply(PCollection<String> bids) {
@@ -243,6 +210,7 @@ public class DailySales {
 		}
 	}
 	
+	//extract only valid bids (a bid against listing), remove duplicates
 	public static class ExtractValidBids extends PTransform<PCollection<String>, PCollection<String>> {
 		@Override
 		public PCollection<String> apply(PCollection<String> lines) {
@@ -253,6 +221,7 @@ public class DailySales {
 		}
 	}
 	
+	//map each transaction to cat-1, cat, day and day+hour
 	public static class Classifer extends PTransform<PCollection<String>, PCollection<String>> {
 		@Override
 		public PCollection<String> apply(PCollection<String> lines) {
@@ -269,8 +238,7 @@ public class DailySales {
 							return results;
 						}
 					}))
-					.apply(GroupByKey.create())
-					.apply(Combine.groupedValues(new DailyStats()))
+					.apply(Combine.perKey(new DailyStats()))
 					.apply(MapElements.via(new SimpleFunction<KV<String, String>, String>() {
 						@Override
 						public String apply(KV<String, String> input) {
@@ -278,6 +246,18 @@ public class DailySales {
 						}
 					}));
 		}
+	}
+
+	public static Pipeline createPipeline(DailySalesOptions dailySalesOptions) {
+		Pipeline p = Pipeline.create(dailySalesOptions);
+		p.getCoderRegistry().registerCoder(DailyStats.Stats.class, DailyStats.getCoder());
+		
+		PCollectionTuple tuples = p.apply(TextIO.Read.named("ReadLines").from(dailySalesOptions.getInputFile()).withCompressionType(TextIO.CompressionType.GZIP))
+		.apply(new ExtractValidBids())
+		.apply(new RemoveDuplicates());
+		tuples.get(errorsTag).apply(TextIO.Write.named("WriteErrors").to(dailySalesOptions.getErrorFile()));
+		tuples.get(validBidsTag).apply(new Classifer()).apply(TextIO.Write.named("Stats").to(dailySalesOptions.getOutput()));
+		return p;
 	}
 
 	public static void main(String[] args) {
