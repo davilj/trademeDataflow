@@ -7,7 +7,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.davilj.trademe.dataflow.reports.DailySales.DailySalesOptions;
+import org.davilj.trademe.dataflow.reports.aggregate.Aggregator;
+import org.davilj.trademe.dataflow.reports.aggregate.Aggregator.AggregateOptions;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -16,11 +17,11 @@ import com.google.cloud.dataflow.sdk.options.PipelineOptionsFactory;
 import com.google.cloud.dataflow.sdk.transforms.DoFnTester;
 import com.google.cloud.dataflow.sdk.values.KV;
 
-public class DailySalesTest {
+public class AggregateTest {
 
 	@Test
 	public void ExtractValidBid() {
-		DailySales.ExtractValidBid extractValidBids = new DailySales.ExtractValidBid();
+		Aggregator.ExtractValidBid extractValidBids = new Aggregator.ExtractValidBid();
 		DoFnTester<String, String> extractValidBidsTester = DoFnTester.of(extractValidBids);
 
 		// Test
@@ -32,7 +33,7 @@ public class DailySalesTest {
 
 	@Test
 	public void ExtractInValidBid() {
-		DailySales.ExtractValidBid extractValidBids = new DailySales.ExtractValidBid();
+		Aggregator.ExtractValidBid extractValidBids = new Aggregator.ExtractValidBid();
 		DoFnTester<String, String> extractValidBidsTester = DoFnTester.of(extractValidBids);
 
 		// Test
@@ -44,7 +45,7 @@ public class DailySalesTest {
 
 	@Test
 	public void ExtractKey() {
-		DailySales.ExtractKey extractKey = new DailySales.ExtractKey();
+		Aggregator.ExtractKey extractKey = new Aggregator.ExtractKey();
 		DoFnTester<String, KV<String, String>> extractKeyTester = DoFnTester.of(extractKey);
 
 		// Test
@@ -61,7 +62,7 @@ public class DailySalesTest {
 
 	@Test
 	public void ExtractBidInfo() {
-		DailySales.ExtractBidInfo extractBidInfo = new DailySales.ExtractBidInfo();
+		Aggregator.ExtractBidInfo extractBidInfo = new Aggregator.ExtractBidInfo();
 		DoFnTester<String, String> extractBidInfoTester = DoFnTester.of(extractBidInfo);
 
 		// Test
@@ -88,10 +89,10 @@ public class DailySalesTest {
 				"--output=/Users/daniev/development/google/trademe/dataflow/src/test/resources/test.dailySales.result",
 				"--errorFile=/Users/daniev/development/google/trademe/dataflow/src/test/resources/test.dailySales.errors" };
 
-		DailySalesOptions dailySalesOptions = PipelineOptionsFactory.fromArgs(args).withValidation()
-				.as(DailySalesOptions.class);
+		AggregateOptions dailySalesOptions = PipelineOptionsFactory.fromArgs(args).withValidation()
+				.as(AggregateOptions.class);
 
-		Pipeline p = DailySales.createPipeline(dailySalesOptions);
+		Pipeline p = Aggregator.createPipeline(dailySalesOptions);
 		p.run();
 
 		

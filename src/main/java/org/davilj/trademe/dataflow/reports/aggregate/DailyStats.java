@@ -1,14 +1,11 @@
-package org.davilj.trademe.dataflow.reports;
+package org.davilj.trademe.dataflow.reports.aggregate;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import com.google.cloud.dataflow.sdk.coders.Coder;
 import com.google.cloud.dataflow.sdk.coders.CoderException;
 import com.google.cloud.dataflow.sdk.coders.CustomCoder;
 import com.google.cloud.dataflow.sdk.transforms.Combine.CombineFn;
@@ -16,7 +13,6 @@ import com.google.cloud.dataflow.sdk.transforms.Combine.CombineFn;
 public class DailyStats extends CombineFn<Integer, DailyStats.Stats, String> {
 	
 		public static class Stats {
-		public static final byte STOPBYTE = '@';
 		int sum = 0;
 		int count = 0;
 		int min = Integer.MAX_VALUE;
@@ -31,6 +27,7 @@ public class DailyStats extends CombineFn<Integer, DailyStats.Stats, String> {
 		public String toString() {
 			return String.format("%s|%s|%s|%s", sum, count, min, max);
 		}
+		
 
 		public static Stats readFromStream(InputStream in) {
 			Stats stats = new Stats();
