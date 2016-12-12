@@ -1,4 +1,4 @@
-package org.davilj.trademe.dataflow.reports;
+package org.davilj.trademe.reports;
 
 import java.util.Optional;
 

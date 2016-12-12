@@ -1,12 +1,12 @@
-package org.davilj.trademe.dataflow.reports.monthly;
+package org.davilj.trademe.reports.monthly;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-import org.davilj.trademe.dataflow.reports.SalesReportTemplate;
-import org.davilj.trademe.dataflow.reports.monthly.model.Report;
-import org.davilj.trademe.dataflow.reports.monthly.model.SalesData;
+import org.davilj.trademe.reports.SalesReportTemplate;
+import org.davilj.trademe.reports.monthly.model.Report;
+import org.davilj.trademe.reports.monthly.model.SalesData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

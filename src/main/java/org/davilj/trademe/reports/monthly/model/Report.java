@@ -1,4 +1,4 @@
-package org.davilj.trademe.dataflow.reports.monthly.model;
+package org.davilj.trademe.reports.monthly.model;
 
 import java.util.ArrayList;
 import java.util.Comparator;

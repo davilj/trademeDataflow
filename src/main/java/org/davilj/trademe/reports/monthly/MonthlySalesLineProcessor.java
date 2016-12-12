@@ -1,9 +1,9 @@
-package org.davilj.trademe.dataflow.reports.monthly;
+package org.davilj.trademe.reports.monthly;
 
 import java.util.Optional;
 
-import org.davilj.trademe.dataflow.reports.LineParser;
-import org.davilj.trademe.dataflow.reports.monthly.model.SalesData;
+import org.davilj.trademe.reports.LineParser;
+import org.davilj.trademe.reports.monthly.model.SalesData;
 
 public class MonthlySalesLineProcessor implements LineParser<SalesData>{
 

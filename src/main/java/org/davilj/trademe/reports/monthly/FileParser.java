@@ -1,16 +1,15 @@
-package org.davilj.trademe.dataflow.reports.monthly;
+package org.davilj.trademe.reports.monthly;
 
-import org.davilj.trademe.dataflow.reports.StreamFile;
 import org.davilj.trademe.dataflow.reports.aggregate.DailyStats;
+import org.davilj.trademe.reports.FileLoader;
+import org.davilj.trademe.reports.LineParser;
+import org.davilj.trademe.reports.StreamFile;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import org.davilj.trademe.dataflow.reports.FileLoader;
-import org.davilj.trademe.dataflow.reports.LineParser;
 
 /**
  * Read monthly aggregation file and build json file with sales data for a day

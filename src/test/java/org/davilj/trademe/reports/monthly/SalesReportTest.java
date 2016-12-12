@@ -1,6 +1,10 @@
-package org.davilj.trademe.dataflow.reports.monthly;
+package org.davilj.trademe.reports.monthly;
 
-import org.davilj.trademe.dataflow.reports.SalesReportTemplate;
+import org.davilj.trademe.reports.SalesReportTemplate;
+import org.davilj.trademe.reports.monthly.TopAvgPrices;
+import org.davilj.trademe.reports.monthly.TopMaxSalesPrices;
+import org.davilj.trademe.reports.monthly.TopNumberOfSales;
+import org.davilj.trademe.reports.monthly.TopTotalSales;
 import org.junit.Test;
 
 public class SalesReportTest {

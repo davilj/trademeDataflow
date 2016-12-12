@@ -1,4 +1,4 @@
-package org.davilj.trademe.dataflow.reports;
+package org.davilj.trademe.reports;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -8,11 +8,11 @@ import java.nio.file.Files;
 import java.util.List;
 import java.util.Optional;
 
-import org.davilj.trademe.dataflow.reports.monthly.FileParser;
-import org.davilj.trademe.dataflow.reports.monthly.MonthlySalesLineProcessor;
-import org.davilj.trademe.dataflow.reports.monthly.TopTotalSales;
-import org.davilj.trademe.dataflow.reports.monthly.model.Report;
-import org.davilj.trademe.dataflow.reports.monthly.model.SalesData;
+import org.davilj.trademe.reports.monthly.FileParser;
+import org.davilj.trademe.reports.monthly.MonthlySalesLineProcessor;
+import org.davilj.trademe.reports.monthly.TopTotalSales;
+import org.davilj.trademe.reports.monthly.model.Report;
+import org.davilj.trademe.reports.monthly.model.SalesData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
