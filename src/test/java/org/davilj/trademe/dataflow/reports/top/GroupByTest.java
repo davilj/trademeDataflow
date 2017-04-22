@@ -1,9 +1,9 @@
 package org.davilj.trademe.dataflow.reports.top;
 
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.junit.Test;
 
-import com.google.cloud.dataflow.sdk.Pipeline;
-import com.google.cloud.dataflow.sdk.options.PipelineOptionsFactory;
 
 public class GroupByTest {
 

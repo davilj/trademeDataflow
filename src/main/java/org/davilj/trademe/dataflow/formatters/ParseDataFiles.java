@@ -1,20 +1,21 @@
 package org.davilj.trademe.dataflow.formatters;
 
+import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.TextIO;
+import org.apache.beam.sdk.options.Default;
+import org.apache.beam.sdk.options.DefaultValueFactory;
+import org.apache.beam.sdk.options.Description;
+import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.PTransform;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.util.gcsfs.GcsPath;
+import org.apache.beam.sdk.values.PCollection;
 import org.davilj.trademe.dataflow.model.Listing;
 
-import com.google.cloud.dataflow.sdk.Pipeline;
-import com.google.cloud.dataflow.sdk.io.TextIO;
-import com.google.cloud.dataflow.sdk.options.DataflowPipelineOptions;
-import com.google.cloud.dataflow.sdk.options.Default;
-import com.google.cloud.dataflow.sdk.options.DefaultValueFactory;
-import com.google.cloud.dataflow.sdk.options.Description;
-import com.google.cloud.dataflow.sdk.options.PipelineOptions;
-import com.google.cloud.dataflow.sdk.options.PipelineOptionsFactory;
-import com.google.cloud.dataflow.sdk.transforms.DoFn;
-import com.google.cloud.dataflow.sdk.transforms.PTransform;
-import com.google.cloud.dataflow.sdk.transforms.ParDo;
-import com.google.cloud.dataflow.sdk.util.gcsfs.GcsPath;
-import com.google.cloud.dataflow.sdk.values.PCollection;
+
 
 public class ParseDataFiles {
 
@@ -49,10 +50,14 @@ public class ParseDataFiles {
 	}
 	
 	
-	
+	/**
+	 * Parse a line
+	 * Create Listing object from line, create string with | to separate properties
+	 *
+	 */
 	public static class ExtractBid extends DoFn<String, String> {
 		
-		@Override
+		@ProcessElement
 		public void processElement(ProcessContext c) {
 			//LatestListing [title=Mastering Photoshop 7 New. Pay now., link=/computers/software/other/auction-994633241.htm, closingTimeText=closes in 9 mins, bidInfo=, priceInfo=$15.00];, /Users/daniev/development/google/trademe/d_201512/20151214/0002-/201512140014.ll
 			String line = c.element();
@@ -89,7 +94,7 @@ public class ParseDataFiles {
 	
 	public static class ExtractDetailsOfBids extends PTransform<PCollection<String>, PCollection<String>> {
 		@Override
-		public PCollection<String> apply(PCollection<String> lines) {
+		public PCollection<String> expand(PCollection<String> lines) {
 			return lines.apply(ParDo.of(new ExtractBid()));
 		}
 	}
@@ -102,9 +107,9 @@ public class ParseDataFiles {
 	
 	public static Pipeline createPipeline(DailySalesOptions dailySalesOptions) {
 		Pipeline p = Pipeline.create(dailySalesOptions);
-		p.apply(TextIO.Read.named("ReadLines").from(dailySalesOptions.getInputFile()).withCompressionType(TextIO.CompressionType.GZIP))
-		.apply(new ExtractDetailsOfBids())
-		.apply(TextIO.Write.named("WriteTransactions").to(dailySalesOptions.getOutput()));
+		p.apply(TextIO.Read.from(dailySalesOptions.getInputFile()).withCompressionType(TextIO.CompressionType.GZIP))
+		.apply("Extract Details", new ExtractDetailsOfBids())
+		.apply(TextIO.Write.to(dailySalesOptions.getOutput()));
 		return p;
 	}
 }

@@ -3,6 +3,28 @@ package org.davilj.trademe.dataflow.reports.aggregate;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.TextIO;
+import org.apache.beam.sdk.options.Default;
+import org.apache.beam.sdk.options.DefaultValueFactory;
+import org.apache.beam.sdk.options.Description;
+import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.Combine;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.FlatMapElements;
+import org.apache.beam.sdk.transforms.GroupByKey;
+import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.transforms.PTransform;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.SimpleFunction;
+import org.apache.beam.sdk.util.gcsfs.GcsPath;
+import org.apache.beam.sdk.values.KV;
+import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PCollectionTuple;
+import org.apache.beam.sdk.values.TupleTag;
+import org.apache.beam.sdk.values.TupleTagList;
 import org.davilj.trademe.dataflow.model.helpers.BidParser;
 import org.davilj.trademe.dataflow.model.helpers.ListingFactory;
 import org.davilj.trademe.dataflow.model.helpers.ListingParser;
@@ -10,28 +32,6 @@ import org.davilj.trademe.dataflow.model.helpers.ListingParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.cloud.dataflow.sdk.Pipeline;
-import com.google.cloud.dataflow.sdk.io.TextIO;
-import com.google.cloud.dataflow.sdk.options.DataflowPipelineOptions;
-import com.google.cloud.dataflow.sdk.options.Default;
-import com.google.cloud.dataflow.sdk.options.DefaultValueFactory;
-import com.google.cloud.dataflow.sdk.options.Description;
-import com.google.cloud.dataflow.sdk.options.PipelineOptions;
-import com.google.cloud.dataflow.sdk.options.PipelineOptionsFactory;
-import com.google.cloud.dataflow.sdk.transforms.Combine;
-import com.google.cloud.dataflow.sdk.transforms.DoFn;
-import com.google.cloud.dataflow.sdk.transforms.FlatMapElements;
-import com.google.cloud.dataflow.sdk.transforms.GroupByKey;
-import com.google.cloud.dataflow.sdk.transforms.MapElements;
-import com.google.cloud.dataflow.sdk.transforms.PTransform;
-import com.google.cloud.dataflow.sdk.transforms.ParDo;
-import com.google.cloud.dataflow.sdk.transforms.SimpleFunction;
-import com.google.cloud.dataflow.sdk.util.gcsfs.GcsPath;
-import com.google.cloud.dataflow.sdk.values.KV;
-import com.google.cloud.dataflow.sdk.values.PCollection;
-import com.google.cloud.dataflow.sdk.values.PCollectionTuple;
-import com.google.cloud.dataflow.sdk.values.TupleTag;
-import com.google.cloud.dataflow.sdk.values.TupleTagList;
 /**
  * A pipeline that run thought all bids, aggregate over hour and day and
  * group by cat and cat3
@@ -82,7 +82,7 @@ public class Aggregator {
 
 	public static class ExtractValidBid extends DoFn<String, String> {
 		// only listing with bids
-		@Override
+		@ProcessElement
 		public void processElement(ProcessContext c) {
 			// 994626942|-computers-cables-adaptors-networking|20151216
 			// 045252|/computers/cables-adaptors/networking/auction-994626942.htm|Ethernet
@@ -108,8 +108,8 @@ public class Aggregator {
 
 	// extract cat1, cat, date, date and hour, amount and number of bids
 	public static class ExtractBidInfo extends DoFn<String, String> {
-
-		@Override
+		
+		@ProcessElement
 		public void processElement(ProcessContext c) throws Exception {
 			// 994626942|-computers-cables-adaptors-networking|20151216
 			// 045252|/computers/cables-adaptors/networking/auction-994626942.htm|Ethernet
@@ -134,7 +134,7 @@ public class Aggregator {
 	// ensure that we remove duplicates
 	public static class ExtractKey extends DoFn<String, KV<String, String>> {
 
-		@Override
+		@ProcessElement
 		public void processElement(ProcessContext c) throws Exception {
 			String line = c.element();
 			ListingParser listingParser = ListingFactory.createParser(line);
@@ -146,7 +146,7 @@ public class Aggregator {
 
 	public static class RemoveDuplicate extends DoFn<KV<String, Iterable<String>>, String> {
 
-		@Override
+		@ProcessElement
 		public void processElement(DoFn<KV<String, Iterable<String>>, String>.ProcessContext c) throws Exception {
 			String _bid = null;
 			for (String bid : c.element().getValue()) {
@@ -169,7 +169,7 @@ public class Aggregator {
 
 		// Side output, grouping in Cat1, cat, day, day-hour, hour for
 		// numberOfBids and amount
-		@Override
+		@ProcessElement
 		public void processElement(DoFn<String, String[]>.ProcessContext c) throws Exception {
 			String bidStr = c.element();
 			try {
@@ -189,13 +189,12 @@ public class Aggregator {
 			} catch (Exception e) {
 				LOG.error("Could not parse: " + bidStr);
 			}
-
 		}
 	}
 
 	public static class RemoveDuplicates extends PTransform<PCollection<String>, PCollectionTuple> {
 		@Override
-		public PCollectionTuple apply(PCollection<String> bids) {
+		public PCollectionTuple expand(PCollection<String> bids) {
 			return bids.apply(ParDo.withOutputTags(validBidsTag, TupleTagList.of(errorsTag)).of(new ExtractBidInfo()));
 		}
 	}
@@ -203,7 +202,7 @@ public class Aggregator {
 	// extract only valid bids (a bid against listing), remove duplicates
 	public static class ExtractValidBids extends PTransform<PCollection<String>, PCollection<String>> {
 		@Override
-		public PCollection<String> apply(PCollection<String> lines) {
+		public PCollection<String> expand(PCollection<String> lines) {
 			return lines.apply(ParDo.of(new ExtractValidBid())).apply(ParDo.of(new ExtractKey()))
 					.apply(GroupByKey.<String, String>create()).apply(ParDo.of(new RemoveDuplicate()));
 		}
@@ -213,8 +212,7 @@ public class Aggregator {
 	public static class Classifer extends PTransform<PCollection<String>, PCollection<String>> {
 		private static final Logger LOG = LoggerFactory.getLogger(Classifer.class);
 
-		@Override
-		public PCollection<String> apply(PCollection<String> lines) {
+		public PCollection<String> expand(PCollection<String> lines) {
 			return lines.apply(ParDo.of(new ExtratDailyData()))
 					.apply(FlatMapElements.via(new SimpleFunction<String[], Iterable<KV<String, Integer>>>() {
 						@Override
@@ -248,12 +246,12 @@ public class Aggregator {
 		p.getCoderRegistry().registerCoder(DailyStats.Stats.class, DailyStats.getCoder());
 
 		PCollectionTuple tuples = p
-				.apply(TextIO.Read.named("ReadLines").from(dailySalesOptions.getInputFile())
+				.apply(TextIO.Read.from(dailySalesOptions.getInputFile())
 						.withCompressionType(TextIO.CompressionType.GZIP))
 				.apply(new ExtractValidBids()).apply(new RemoveDuplicates());
-		tuples.get(errorsTag).apply(TextIO.Write.named("WriteErrors").to(dailySalesOptions.getErrorFile()));
+		tuples.get(errorsTag).apply(TextIO.Write.to(dailySalesOptions.getErrorFile()));
 		tuples.get(validBidsTag).apply(new Classifer())
-				.apply(TextIO.Write.named("Stats").to(dailySalesOptions.getOutput()));
+				.apply(TextIO.Write.to(dailySalesOptions.getOutput()));
 		return p;
 	}
 

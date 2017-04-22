@@ -7,25 +7,24 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.TextIO;
+import org.apache.beam.sdk.options.Description;
+import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.DoFn.ProcessContext;
+import org.apache.beam.sdk.transforms.GroupByKey;
+import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.transforms.PTransform;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.SimpleFunction;
+import org.apache.beam.sdk.values.KV;
+import org.apache.beam.sdk.values.PCollection;
 //Import SLF4J packages.
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.api.client.util.Lists;
-import com.google.cloud.dataflow.sdk.Pipeline;
-import com.google.cloud.dataflow.sdk.io.TextIO;
-import com.google.cloud.dataflow.sdk.options.Default;
-import com.google.cloud.dataflow.sdk.options.Description;
-import com.google.cloud.dataflow.sdk.options.PipelineOptions;
-import com.google.cloud.dataflow.sdk.options.PipelineOptionsFactory;
-import com.google.cloud.dataflow.sdk.transforms.DoFn;
-import com.google.cloud.dataflow.sdk.transforms.GroupByKey;
-import com.google.cloud.dataflow.sdk.transforms.MapElements;
-import com.google.cloud.dataflow.sdk.transforms.PTransform;
-import com.google.cloud.dataflow.sdk.transforms.ParDo;
-import com.google.cloud.dataflow.sdk.transforms.SimpleFunction;
-import com.google.cloud.dataflow.sdk.values.KV;
-import com.google.cloud.dataflow.sdk.values.PCollection;
 
 import io.grpc.internal.Stream;
 
@@ -56,7 +55,6 @@ public class GroupByPipeLine {
 		private static final Logger LOG = LoggerFactory.getLogger(ExtractDailyBidsAndGroupByCat.class);
 
 		// only listing with bids
-		@Override
 		public void processElement(ProcessContext c) {
 			// business|20151223:6|116019|399|51100
 			String line = c.element();
@@ -81,12 +79,10 @@ public class GroupByPipeLine {
 	}
 
 	public static class GroupByFunction extends PTransform<PCollection<String>, PCollection<String>> {
-		@Override
 		public PCollection<String> apply(PCollection<String> lines) {
 			return lines.apply(ParDo.of(new ExtractDailyBidsAndGroupByCat())).apply(GroupByKey.<String, String>create())
 					.apply(MapElements.via(new SimpleFunction<KV<String, Iterable<String>>, String>() {
 
-						@Override
 						public String apply(KV<String, Iterable<String>> kv) {
 							String cat = kv.getKey();
 							Iterable<String> values = kv.getValue();
@@ -142,14 +138,20 @@ public class GroupByPipeLine {
 			Collections.reverse(days);
 			return days;
 		}
+
+		@Override
+		public PCollection<String> expand(PCollection<String> arg0) {
+			// TODO Auto-generated method stub
+			return null;
+		}
 	}
 
 	public static Pipeline createPipeline(GroupByPipeLine.GroupByOptions options) {
 		String dir = options.getInputDir() + File.separator + "ds_*.txt-*";
 		Pipeline p = Pipeline.create(options);
-		p.apply(TextIO.Read.named("Read Daily Stats").from(dir))
+		p.apply(TextIO.Read.from(dir))
 				.apply(new GroupByFunction())
-				.apply(TextIO.Write.named("persist2File").to(options.getOutput()));
+				.apply(TextIO.Write.to(options.getOutput()));
 		return p;
 	}
 

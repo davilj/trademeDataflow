@@ -7,51 +7,51 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.DoFnTester;
+import org.apache.beam.sdk.values.KV;
 import org.davilj.trademe.dataflow.reports.aggregate.Aggregator;
 import org.davilj.trademe.dataflow.reports.aggregate.Aggregator.AggregateOptions;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.google.cloud.dataflow.sdk.Pipeline;
-import com.google.cloud.dataflow.sdk.options.PipelineOptionsFactory;
-import com.google.cloud.dataflow.sdk.transforms.DoFnTester;
-import com.google.cloud.dataflow.sdk.values.KV;
 
 public class AggregateTest {
 
 	@Test
-	public void ExtractValidBid() {
+	public void ExtractValidBid() throws Exception {
 		Aggregator.ExtractValidBid extractValidBids = new Aggregator.ExtractValidBid();
 		DoFnTester<String, String> extractValidBidsTester = DoFnTester.of(extractValidBids);
 
 		// Test
 		String testInput = "994633241|-computers-software-other|20151214 092309|/computers/software/other/auction-994633241.htm|Mastering Photoshop 7 New. Pay now.|1|1500";
 
-		List<String> resultArr = extractValidBidsTester.processBatch(testInput);
+		List<String> resultArr = extractValidBidsTester.processBundle(testInput);
 		Assert.assertEquals(1, resultArr.size());
 	}
 
 	@Test
-	public void ExtractInValidBid() {
+	public void ExtractInValidBid() throws Exception {
 		Aggregator.ExtractValidBid extractValidBids = new Aggregator.ExtractValidBid();
 		DoFnTester<String, String> extractValidBidsTester = DoFnTester.of(extractValidBids);
 
 		// Test
 		String testInput = "994633241|-computers-software-other|20151214 092309|/computers/software/other/auction-994633241.htm|Mastering Photoshop 7 New. Pay now.||1500";
 
-		List<String> resultArr = extractValidBidsTester.processBatch(testInput);
+		List<String> resultArr = extractValidBidsTester.processBundle(testInput);
 		Assert.assertEquals(0, resultArr.size());
 	}
 
 	@Test
-	public void ExtractKey() {
+	public void ExtractKey() throws Exception {
 		Aggregator.ExtractKey extractKey = new Aggregator.ExtractKey();
 		DoFnTester<String, KV<String, String>> extractKeyTester = DoFnTester.of(extractKey);
 
 		// Test
 		String testInput = "994633241|-computers-software-other|20151214 092309|/computers/software/other/auction-994633241.htm|Mastering Photoshop 7 New. Pay now.||1500";
 
-		List<KV<String, String>> resultArr = extractKeyTester.processBatch(testInput);
+		List<KV<String, String>> resultArr = extractKeyTester.processBundle(testInput);
 		Assert.assertEquals(1, resultArr.size());
 		KV<String, String> keys = resultArr.get(0);
 		Assert.assertEquals("994633241", keys.getKey());
@@ -61,14 +61,14 @@ public class AggregateTest {
 	}
 
 	@Test
-	public void ExtractBidInfo() {
+	public void ExtractBidInfo() throws Exception {
 		Aggregator.ExtractBidInfo extractBidInfo = new Aggregator.ExtractBidInfo();
 		DoFnTester<String, String> extractBidInfoTester = DoFnTester.of(extractBidInfo);
 
 		// Test
 		String testInput = "994633241|-computers-software-other|20151214 092309|/computers/software/other/auction-994633241.htm|Mastering Photoshop 7 New. Pay now.|10|1500";
 
-		List<String> resultArr = extractBidInfoTester.processBatch(testInput);
+		List<String> resultArr = extractBidInfoTester.processBundle(testInput);
 		Assert.assertEquals(1, resultArr.size());
 		String bidInfo = resultArr.get(0);
 		// cat1, cat, day, hour, dayHour, bids, amount

@@ -8,21 +8,21 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.coders.StringUtf8Coder;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.testing.TestPipeline;
+import org.apache.beam.sdk.transforms.Count;
+import org.apache.beam.sdk.transforms.Create;
+import org.apache.beam.sdk.transforms.DoFnTester;
+import org.apache.beam.sdk.values.KV;
+import org.apache.beam.sdk.values.PCollection;
 import org.davilj.trademe.dataflow.formatters.ParseDataFiles.DailySalesOptions;
 import org.davilj.trademe.dataflow.formatters.ParseDataFiles.ExtractDetailsOfBids;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 
-import com.google.cloud.dataflow.sdk.Pipeline;
-import com.google.cloud.dataflow.sdk.coders.StringUtf8Coder;
-import com.google.cloud.dataflow.sdk.options.PipelineOptionsFactory;
-import com.google.cloud.dataflow.sdk.testing.DataflowAssert;
-import com.google.cloud.dataflow.sdk.testing.TestPipeline;
-import com.google.cloud.dataflow.sdk.transforms.Count;
-import com.google.cloud.dataflow.sdk.transforms.Create;
-import com.google.cloud.dataflow.sdk.transforms.DoFnTester;
-import com.google.cloud.dataflow.sdk.values.KV;
-import com.google.cloud.dataflow.sdk.values.PCollection;
 
 public class ParseDataFilesTest {
 
@@ -60,14 +60,14 @@ public class ParseDataFilesTest {
 	}
 
 	@Test
-	public void testParseLineNoBid() {
+	public void testParseLineNoBid() throws Exception {
 		ParseDataFiles.ExtractBid extract = new ParseDataFiles.ExtractBid();
 		DoFnTester<String, String> extractBidTester = DoFnTester.of(extract);
 
 		// Test
 		String testInput = "LatestListing [title=Mastering Photoshop 7 New. Pay now., link=/computers/software/other/auction-994633241.htm, closingTimeText=closes in 9 mins, bidInfo=, priceInfo=$15.00];, /Users/daniev/development/google/trademe/d_201512/20151214/0002-/201512140014.ll";
 
-		List<String> resultArr = extractBidTester.processBatch(testInput);
+		List<String> resultArr = extractBidTester.processBundle(testInput);
 		Assert.assertEquals(1, resultArr.size());
 		String resultStr = resultArr.get(0);
 		Assert.assertEquals(
@@ -76,7 +76,7 @@ public class ParseDataFilesTest {
 	}
 
 	@Test
-	public void testParseLineNoPrice() {
+	public void testParseLineNoPrice() throws Exception {
 		// this should not happens ...bids without price
 		ParseDataFiles.ExtractBid extract = new ParseDataFiles.ExtractBid();
 		DoFnTester<String, String> extractBidTester = DoFnTester.of(extract);
@@ -84,7 +84,7 @@ public class ParseDataFilesTest {
 		// Test
 		String testInput = "LatestListing [title=Mastering Photoshop 7 New. Pay now., link=/computers/software/other/auction-994633241.htm, closingTimeText=closes in 9 mins, bidInfo=14bids, priceInfo=];, /Users/daniev/development/google/trademe/d_201512/20151214/0002-/201512140014.ll";
 
-		List<String> resultArr = extractBidTester.processBatch(testInput);
+		List<String> resultArr = extractBidTester.processBundle(testInput);
 		Assert.assertEquals(1, resultArr.size());
 		String resultStr = resultArr.get(0);
 		Assert.assertEquals(
@@ -93,14 +93,14 @@ public class ParseDataFilesTest {
 	}
 
 	@Test
-	public void testParseLine() {
+	public void testParseLine() throws Exception {
 		ParseDataFiles.ExtractBid extract = new ParseDataFiles.ExtractBid();
 		DoFnTester<String, String> extractBidTester = DoFnTester.of(extract);
 
 		// Test
 		String testInput = "LatestListing [title=Mastering Photoshop 7 New. Pay now., link=/computers/software/other/auction-994633241.htm, closingTimeText=closes in 9 mins, bidInfo=1bid, priceInfo=$15.00];, /Users/daniev/development/google/trademe/d_201512/20151214/0002-/201512140014.ll";
 
-		List<String> resultArr = extractBidTester.processBatch(testInput);
+		List<String> resultArr = extractBidTester.processBundle(testInput);
 		Assert.assertEquals(1, resultArr.size());
 		String resultStr = resultArr.get(0);
 		Assert.assertEquals(
@@ -109,14 +109,14 @@ public class ParseDataFilesTest {
 	}
 
 	@Test
-	public void testParseLine10Bids() {
+	public void testParseLine10Bids() throws Exception {
 		ParseDataFiles.ExtractBid extract = new ParseDataFiles.ExtractBid();
 		DoFnTester<String, String> extractBidTester = DoFnTester.of(extract);
 
 		// Test
 		String testInput = "LatestListing [title=Mastering Photoshop 7 New. Pay now., link=/computers/software/other/auction-994633241.htm, closingTimeText=closes in 9 mins, bidInfo=1 bid, priceInfo=$15.00];, /Users/daniev/development/google/trademe/d_201512/20151214/0002-/201512140014.ll";
 
-		List<String> resultArr = extractBidTester.processBatch(testInput);
+		List<String> resultArr = extractBidTester.processBundle(testInput);
 		Assert.assertEquals(1, resultArr.size());
 		String resultStr = resultArr.get(0);
 		Assert.assertEquals(
@@ -125,38 +125,18 @@ public class ParseDataFilesTest {
 	}
 
 	@Test
-	public void testParseLineBid() {
+	public void testParseLineBid() throws Exception {
 		ParseDataFiles.ExtractBid extract = new ParseDataFiles.ExtractBid();
 		DoFnTester<String, String> extractBidTester = DoFnTester.of(extract);
 
 		// Test
 		String testInput = "LatestListing [title=Mastering Photoshop 7 New. Pay now., link=/computers/software/other/auction-994633241.htm, closingTimeText=closes in 9 mins, bidInfo=10 bids, priceInfo=$15.00];, /Users/daniev/development/google/trademe/d_201512/20151214/0002-/201512140014.ll";
 
-		List<String> resultArr = extractBidTester.processBatch(testInput);
+		List<String> resultArr = extractBidTester.processBundle(testInput);
 		Assert.assertEquals(1, resultArr.size());
 		String resultStr = resultArr.get(0);
 		Assert.assertEquals(
 				"994633241|-computers-software-other|20151214 092309|/computers/software/other/auction-994633241.htm|Mastering Photoshop 7 New. Pay now.|10|1500",
 				resultStr);
 	}
-
-	@Test
-	public void testCount() {
-		// Create a test pipeline.
-		Pipeline p = TestPipeline.create();
-
-		// Create an input PCollection.
-		PCollection<String> input = p.apply(Create.of(WORDS)).setCoder(StringUtf8Coder.of());
-
-		// Apply the Count transform under test.
-		PCollection<KV<String, Long>> output = input.apply(Count.<String>perElement());
-
-		// Assert on the results.
-		DataflowAssert.that(output).containsInAnyOrder(KV.of("hi", 4L), KV.of("there", 1L), KV.of("sue", 2L),
-				KV.of("bob", 2L), KV.of("", 3L), KV.of("ZOW", 1L));
-
-		// Run the pipeline.
-		p.run();
-	}
-
 }

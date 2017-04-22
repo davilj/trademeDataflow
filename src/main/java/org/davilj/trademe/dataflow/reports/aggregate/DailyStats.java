@@ -6,9 +6,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import com.google.cloud.dataflow.sdk.coders.CoderException;
-import com.google.cloud.dataflow.sdk.coders.CustomCoder;
-import com.google.cloud.dataflow.sdk.transforms.Combine.CombineFn;
+import org.apache.beam.sdk.coders.Coder;
+import org.apache.beam.sdk.coders.CoderException;
+import org.apache.beam.sdk.coders.CustomCoder;
+import org.apache.beam.sdk.transforms.Combine.CombineFn;
+
 
 public class DailyStats extends CombineFn<Integer, DailyStats.Stats, String> {
 	
@@ -97,12 +99,12 @@ public class DailyStats extends CombineFn<Integer, DailyStats.Stats, String> {
 
 		@Override
 		public void encode(Stats value, OutputStream outStream,
-				com.google.cloud.dataflow.sdk.coders.Coder.Context context) throws CoderException, IOException {
+				Context context) throws CoderException, IOException {
 			value.writeToSteam(outStream);
 		}
 
 		@Override
-		public Stats decode(InputStream inStream, com.google.cloud.dataflow.sdk.coders.Coder.Context context)
+		public Stats decode(InputStream inStream, Coder.Context context)
 				throws CoderException, IOException {
 			return Stats.readFromStream(inStream);
 		}
