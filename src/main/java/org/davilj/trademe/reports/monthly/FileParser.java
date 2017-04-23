@@ -1,6 +1,6 @@
 package org.davilj.trademe.reports.monthly;
 
-import org.davilj.trademe.dataflow.reports.aggregate.DailyStats;
+import org.davilj.trademe.dataflow.bids.DailyStats;
 import org.davilj.trademe.reports.FileLoader;
 import org.davilj.trademe.reports.LineParser;
 import org.davilj.trademe.reports.StreamFile;
