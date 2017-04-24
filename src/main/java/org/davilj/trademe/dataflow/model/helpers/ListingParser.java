@@ -21,8 +21,21 @@ public class ListingParser {
 		}
 		String[] catParts =  category.split("-");
 		
-		String[] catInfo = {catParts[0], category};
+		String[] catInfo = {catParts[0], cat3(catParts), category};
 		return catInfo;
+	}
+	
+	//build category name 3 levels deep of full category
+	//if less that 3 levels deep return full
+	protected String cat3(String[] catInfo) {
+		int end = (catInfo.length > 3)?3:catInfo.length;
+		StringBuilder cat = new StringBuilder();
+		cat.append(catInfo[0]);
+		for (int n=1; n < end; n++) {
+			cat.append("-");
+			cat.append(catInfo[n]);
+		}
+		return cat.toString();
 	}
 	
 	public String[] extractDayAndHour(String timeText) {

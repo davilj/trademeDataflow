@@ -24,7 +24,21 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 
-
+/**
+ * Parse raw data and extract listing
+ * listing:
+ * 1295765113|-computers-tablets-ebook-readers-tablet-accessories-cases-covers|20170411 074907|/computers/tablets-ebook-readers/tablet-accessories/cases-covers/auction-1295765113.htm|Samsung Galaxy Tab S2 9.7 Case T810 T815 New. Pay now.||1290
+ * id
+ * cat
+ * date time
+ * listing
+ * Desc
+ * bids
+ * price (if price populated, but without a bid no cell)
+ * 
+ * @author daniev
+ *
+ */
 public class ParseDataFilesTest {
 
 	//Manual test
@@ -32,8 +46,8 @@ public class ParseDataFilesTest {
 	@Test
 	public void testPipeLineFor_A_DailyFiles() throws IOException {
 			String[] args = {
-					"--inputFile=src/test/resources/dailyRawData/*",
-					"--output=src/test/resources/dailyRawDataResults/listings"
+					"--inputFile=src/test/resources/dailyRawData/20170411.zip",
+					"--output=src/test/resources/dailyRawDataResults/"
 					};
 
 			DailySalesOptions dailySalesOptions = PipelineOptionsFactory.fromArgs(args).withValidation()
@@ -45,23 +59,7 @@ public class ParseDataFilesTest {
 	}
 	
 	
-	//Manual test
-	//read all zip files in dailyRawData and create files with listings
-	@Test
-	public void testPipeLineForDailyFiles() throws IOException {
-		String[] args = {
-				"--inputFile=src/test/resources/dailyRawData/*",
-				"--output=src/test/resources/dailyRawDataResults/listings"
-				};
-
-		DailySalesOptions dailySalesOptions = PipelineOptionsFactory.fromArgs(args).withValidation()
-				.as(DailySalesOptions.class);
-
-		Pipeline p = ParseDataFiles.createPipeline(dailySalesOptions);
-		p.run().waitUntilFinish();
-
-	}
-
+	
 	@Test
 	public void testParseLineNoBid() throws Exception {
 		ParseDataFiles.ExtractListings extract = new ParseDataFiles.ExtractListings();

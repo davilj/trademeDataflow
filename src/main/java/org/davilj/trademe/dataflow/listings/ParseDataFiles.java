@@ -1,5 +1,7 @@
 package org.davilj.trademe.dataflow.listings;
 
+import java.io.File;
+
 import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
@@ -29,27 +31,21 @@ public class ParseDataFiles {
 		@Description("Path of the file to read from")
 		@Default.String("gs://trademeupload/*")
 		String getInputFile();
-
 		void setInputFile(String value);
 
 		@Description("Path of the file to write to")
-		@Default.InstanceFactory(OutputFactory.class)
 		String getOutput();
-
 		void setOutput(String value);
-
-		/**
-		 * Returns "gs://${YOUR_STAGING_DIRECTORY}/counts.txt" as the default
-		 * destination.
-		 */
-		public static class OutputFactory implements DefaultValueFactory<String> {
-			@Override
-			public String create(PipelineOptions options) {
-				DataflowPipelineOptions dataflowOptions = options.as(DataflowPipelineOptions.class);
-				if (dataflowOptions.getStagingLocation() != null) {
-					return GcsPath.fromUri(dataflowOptions.getStagingLocation()).resolve("counts.txt").toString();
+		
+		public static interface Helper {
+			public static String deriveOutput(String output, String input) {
+				if (!input.endsWith("*")) {
+					String name = new File(input).getName();
+					String[] nameTokens = name.split("\\.");
+					String namePart = nameTokens[0];
+					return output + File.separator + namePart + File.separator + "file";
 				} else {
-					throw new IllegalArgumentException("Must specify --output or --stagingLocation");
+					return output;
 				}
 			}
 		}
@@ -94,8 +90,6 @@ public class ParseDataFiles {
 			builder.append(listing.getListingprice()==null?"":listing.getListingprice());
 			return builder.toString();
 		}
-
-		
 	}
 	
 	public static class ExtractDetailsOfListings extends PTransform<PCollection<String>, PCollection<String>> {
@@ -112,10 +106,16 @@ public class ParseDataFiles {
 	}
 	
 	public static Pipeline createPipeline(DailySalesOptions dailySalesOptions) {
+		String output = dailySalesOptions.getOutput();
+		String input = dailySalesOptions.getInputFile();
+		output = DailySalesOptions.Helper.deriveOutput(output, input);
+		
 		Pipeline p = Pipeline.create(dailySalesOptions);
 		p.apply(TextIO.Read.withCompressionType(TextIO.CompressionType.AUTO).from(dailySalesOptions.getInputFile()))
 		.apply("Extract Listings", new ExtractDetailsOfListings())
-		.apply(TextIO.Write.to(dailySalesOptions.getOutput()));
+		.apply(TextIO.Write.to(output));
 		return p;
 	}
+	
+	
 }
