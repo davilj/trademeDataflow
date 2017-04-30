@@ -14,6 +14,7 @@ public class ListingParser {
 		return parts[2];
 	}
 	
+	//cat1,cat3,cat
 	public String[] getCategory() {
 		String category = parts[1];
 		if (category.startsWith("-")) {

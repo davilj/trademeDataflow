@@ -136,7 +136,7 @@ public class ExtractValidBids {
 
 			if (line != null && !line.trim().isEmpty()) {
 				ListingParser listingParser = ListingFactory.createParser(line);
-				String id = listingParser.getId();
+				//String id = listingParser.getId();
 				String dateStr = listingParser.getDateStr();
 				String[] dateKeys = listingParser.extractDayAndHour(dateStr);
 				String[] catKeys = listingParser.getCategory();
@@ -144,9 +144,9 @@ public class ExtractValidBids {
 				String amount = listingParser.getAmountStr();
 				
 				//id, cat1, cat, day, hour, dayHour, bids, amount
-				String bidData = String.format("%s|%s|%s|%s|%s|%s|%s|%S", catKeys[0], catKeys[1], catKeys[2], dateKeys[0], dateKeys[1],
-						dateKeys[2], bidNumber, amount);
-				c.output(bidData);
+				BidParser bid = BidParser.create(String.format("%s|%s|%s|%s|%s|%s|%s|%s", catKeys[0], catKeys[1], catKeys[2], dateKeys[0], dateKeys[1],
+						dateKeys[2], bidNumber, amount));
+				c.output(bid.toString());
 			}
 		}
 	}
@@ -296,8 +296,9 @@ public class ExtractValidBids {
 		
 		//bids
 		PCollection<String> bid2 = results.get(validBidsTag)
-				.apply("bids facotry", ParDo.of(new ExtractBidInfo()))
-				.apply("csv factory", ParDo.of(new CSVfromBids()));
+				.apply("bids facotry", ParDo.of(new ExtractBidInfo()));
+				
+		//write to file
 		bid2.apply(TextIO.Write.to(output));
 		
 		//extract and group
