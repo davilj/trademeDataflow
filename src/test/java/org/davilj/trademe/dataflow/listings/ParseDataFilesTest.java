@@ -46,7 +46,7 @@ public class ParseDataFilesTest {
 	@Test
 	public void testPipeLineFor_A_DailyFiles() throws IOException {
 			String[] args = {
-					"--inputFile=src/test/resources/dailyRawData/20170411.zip",
+					"--inputFile=src/test/resources/dailyRawData/20170423.zip",
 					"--output=src/test/resources/dailyRawDataResults/"
 					};
 
