@@ -1,6 +1,7 @@
 package org.davilj.trademe.dataflow.bids;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -20,9 +21,11 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.FlatMapElements;
 import org.apache.beam.sdk.transforms.GroupByKey;
 import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.transforms.Min;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.SimpleFunction;
+import org.apache.beam.sdk.transforms.Sum;
 import org.apache.beam.sdk.util.gcsfs.GcsPath;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
@@ -75,7 +78,7 @@ public class BidsAggregation {
 	
 	final static List<TupleTag<?>> tuples = Arrays.asList(dailyCat1BidsTuple, hourlyCatBidsTuple, hourlyCat1BidsTuple, dailyCatSalesTuple, dailyCat1SalesTuple, hourlyCatSalesTuple, hourlyCat1SalesTuple, errorsTuples);
 
-	public static interface BidsPipeLineOptions extends PipelineOptions {
+	public static interface AggregatorPipeLineOptions extends PipelineOptions {
 		@Description("Path of the file to read from")
 		@Default.String("gs://tradmerawdata/*")
 		String getInputFile();
@@ -158,11 +161,11 @@ public class BidsAggregation {
 				int sales = parser.getAmount();
 				int bids = parser.getNumberOfBids();
 				
-				//bids,dailyCatBids is output
-				c.output(String.format("%s|%d", dailyCats, sales));
-				c.sideOutput(dailyCat1BidsTuple,  String.format("%s|%d", dailyCat1s, sales) );
-				c.sideOutput(hourlyCatBidsTuple,  String.format("%s|%d", hourlyCats, sales) );
-				c.sideOutput(hourlyCat1BidsTuple,  String.format("%s|%d", hourlyCat1s, sales) );
+				//bids,dailyCatBids is
+				c.output(String.format("%s|%d", dailyCats, bids));
+				c.sideOutput(dailyCat1BidsTuple,  String.format("%s|%d", dailyCat1s, bids) );
+				c.sideOutput(hourlyCatBidsTuple,  String.format("%s|%d", hourlyCats, bids) );
+				c.sideOutput(hourlyCat1BidsTuple,  String.format("%s|%d", hourlyCat1s, bids) );
 				
 				//sales
 				c.sideOutput(dailyCatSalesTuple, String.format("%s|%d", dailyCats, sales));
@@ -191,47 +194,78 @@ public class BidsAggregation {
 
 	}
 	
+	public static class Debugger extends PTransform<PCollection<String>, PCollection<String>> {
+		public PCollection<String> expand(PCollection<String> lines) {
+			PCollection<String> result = lines.apply(MapElements.via(new SimpleFunction<String, String>() {
+						@Override
+						public String apply(String input) {
+							System.err.println("W: " + input);
+							return input;
+						}
+					}));
+			return lines;
+		}
+	}
+	
 	public static class Aggregator extends PTransform<PCollection<String>, PCollection<String>> {
 
 		public PCollection<String> expand(PCollection<String> lines) {
-			return lines.apply(ParDo.of(new ExtractKey()))
-					.apply(Combine.<String, Integer, String>perKey(new DailyStats()))
-					.apply(MapElements.via(new SimpleFunction<KV<String, String>, String>() {
+			PCollection<KV<String, Iterable<Integer>>> groupKeys = lines.apply(ParDo.of(new ExtractKey())).apply(GroupByKey.create());
+			PCollection<KV<String, Integer>> groups = groupKeys.apply(Combine.groupedValues(Sum.ofIntegers()));
+			PCollection<String> result = groups.apply(MapElements.via(new SimpleFunction<KV<String, Integer>, String>() {
 						@Override
-						public String apply(KV<String, String> input) {
-							return input.getKey() + ":" + input.getValue();
+						public String apply(KV<String, Integer> input) {
+							String entry = String.format("%s:%s", input.getKey(), input.getValue());
+							return entry;
 						}
 					}));
+			return result;
 		}
 	}
 
-	public static Pipeline createPipeline(BidsPipeLineOptions bidsOptions) {
+	public static Pipeline createPipeline(AggregatorPipeLineOptions bidsOptions) {
 		Pipeline p = Pipeline.create(bidsOptions);
+		String inputFile = bidsOptions.getInputFile();
+		String filePrefix = extractPrefix(inputFile);
 
 		PCollectionTuple results =	p
 				.apply(TextIO.Read.withCompressionType(TextIO.CompressionType.AUTO).from(bidsOptions.getInputFile()))
-				.apply(ParDo.withOutputTags(dailyCatBidsTuple, TupleTagList.of(tuples)).of(new ExtractValidBid()));
+				.apply(ParDo.withOutputTags(dailyCatBidsTuple, TupleTagList.of(tuples)).of(new GroupByCats()));
 		
 		//write errors to disk
 		results.get(errorsTuples).apply(TextIO.Write.to(bidsOptions.getErrorFile()));
 		
 		//bids
-		results.get(dailyCatBidsTuple).apply(new Aggregator()).apply(TextIO.Write.to(bidsOptions.getDailyCatBids()));
-		results.get(dailyCat1BidsTuple).apply(new Aggregator()).apply(TextIO.Write.to(bidsOptions.getDailyCat1Bids()));
-		results.get(hourlyCatBidsTuple).apply(new Aggregator()).apply(TextIO.Write.to(bidsOptions.getHourlyCatBids()));
-		results.get(hourlyCat1BidsTuple).apply(new Aggregator()).apply(TextIO.Write.to(bidsOptions.getHourlyCat1Bids()));
+		Aggregator agg = new Aggregator();
+		Debugger debug = new Debugger();
+		
+		results.get(dailyCatBidsTuple).apply(agg).apply(debug).apply(TextIO.Write.to(getFileLocation(filePrefix, bidsOptions.getDailyCatBids())));
+		results.get(dailyCat1BidsTuple).apply(agg).apply(TextIO.Write.to(getFileLocation(filePrefix, bidsOptions.getDailyCat1Bids())));
+		results.get(hourlyCatBidsTuple).apply(agg).apply(TextIO.Write.to(getFileLocation(filePrefix, bidsOptions.getHourlyCatBids())));
+		results.get(hourlyCat1BidsTuple).apply(agg).apply(TextIO.Write.to(getFileLocation(filePrefix, bidsOptions.getHourlyCat1Bids())));
 		
 		//sales
-		results.get(dailyCatSalesTuple).apply(new Aggregator()).apply(TextIO.Write.to(bidsOptions.getDailyCatSales()));
-		results.get(dailyCat1SalesTuple).apply(new Aggregator()).apply(TextIO.Write.to(bidsOptions.getDailyCat1Sales()));
-		results.get(hourlyCatSalesTuple).apply(new Aggregator()).apply(TextIO.Write.to(bidsOptions.getHourlyCatSales()));
-		results.get(hourlyCat1SalesTuple).apply(new Aggregator()).apply(TextIO.Write.to(bidsOptions.getHourlyCat1Sales()));
+		results.get(dailyCatSalesTuple).apply(agg).apply(TextIO.Write.to(getFileLocation(filePrefix, bidsOptions.getDailyCatSales())));
+		results.get(dailyCat1SalesTuple).apply(agg).apply(TextIO.Write.to(getFileLocation(filePrefix, bidsOptions.getDailyCat1Sales())));
+		results.get(hourlyCatSalesTuple).apply(agg).apply(TextIO.Write.to(getFileLocation(filePrefix, bidsOptions.getHourlyCatSales())));
+		results.get(hourlyCat1SalesTuple).apply(agg).apply(TextIO.Write.to(getFileLocation(filePrefix, bidsOptions.getHourlyCat1Sales())));
 		
 		return p;
 	}
 
+	private static String extractPrefix(String inputFile) {
+		File file = new File(inputFile);
+		Path path = file.toPath();
+		int parts = path.getNameCount();
+		return path.getName(parts-2).toString();
+	}
+	
+	private static String getFileLocation(String prefix, String baseLocation) {
+		return baseLocation + File.separator + prefix;
+	}
+
 	public static void main(String[] args) {
-		BidsPipeLineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(BidsPipeLineOptions.class);
+		AggregatorPipeLineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(AggregatorPipeLineOptions.class);
 		Pipeline p = createPipeline(options);
 		p.run();
 	}

@@ -1,27 +1,13 @@
 package org.davilj.trademe.dataflow.bids;
 
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.options.Description;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.apache.beam.sdk.transforms.DoFnTester;
-import org.apache.beam.sdk.values.KV;
-import org.davilj.trademe.dataflow.bids.ExtractValidBids;
-import org.davilj.trademe.dataflow.bids.ExtractValidBids.BidsPipeLineOptions;
-import org.junit.Assert;
+import org.davilj.trademe.dataflow.bids.BidsAggregation.AggregatorPipeLineOptions;
 import org.junit.Test;
 
-
 public class BidsAggregatorTest {
-
-		
-	
 
 	@Test
 	public void testPipeLine() throws IOException {
@@ -36,15 +22,13 @@ public class BidsAggregatorTest {
 				"--dailyCat1Sales=src/test/resources/dailyAgg/dailyCat1Sales/",
 				"--hourlyCatSales=src/test/resources/dailyAgg/hourlyCatSales/",
 				"--hourlyCat1Sales=src/test/resources/dailyAgg/hourlyCat1Sales/",
-				"--errorFile=src/test/resources/dailyAgg/err" };
+				"--errorFile=src/test/resources/dailyAgg/err/" };
 
-		BidsPipeLineOptions dailySalesOptions = PipelineOptionsFactory.fromArgs(args).withValidation()
-				.as(BidsPipeLineOptions.class);
+		AggregatorPipeLineOptions aggSalesOptions = PipelineOptionsFactory.fromArgs(args).withValidation()
+				.as(AggregatorPipeLineOptions.class);
 
-		Pipeline p = ExtractValidBids.createPipeline(dailySalesOptions);
+		Pipeline p = BidsAggregation.createPipeline(aggSalesOptions);
 		p.run();
-
-		
 		
 	}
 }
